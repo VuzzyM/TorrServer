@@ -196,7 +196,7 @@ func (r *Reader) getUseReaders() int {
 	readers := 0
 	if r.cache != nil {
 		for reader := range r.cache.readers {
-			if reader.isUse {
+			if reader.isUse && time.Now().Unix() <= reader.lastAccess {
 				readers++
 			}
 		}
