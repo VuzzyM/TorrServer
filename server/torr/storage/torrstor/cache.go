@@ -148,6 +148,9 @@ func (c *Cache) removePiece(piece *Piece) {
 }
 
 func (c *Cache) AdjustRA(readahead int64) {
+	if c == nil {
+		return
+	}
 	if settings.BTsets.CacheSize == 0 {
 		c.capacity = readahead * 3
 	}
@@ -202,13 +205,13 @@ func (c *Cache) cleanPieces() {
 	if c.isRemove.Load() || c.isClosed.Load() {
 		return
 	}
-	
+
 	// Protection against concurrent deletion
 	if !c.muRemove.TryLock() {
 		return // Cleanup is already in progress in another goroutine
 	}
 	defer c.muRemove.Unlock()
-	
+
 	c.isRemove.Store(true)
 	defer func() { c.isRemove.Store(false) }()
 
@@ -373,9 +376,9 @@ func (c *Cache) CloseReader(r *Reader) {
 }
 
 func (c *Cache) clearPriority() {
-	if c.torrent == nil { 
-        return 
-    }
+	if c.torrent == nil {
+		return
+	}
 	time.Sleep(time.Second)
 	ranges := make([]Range, 0)
 	for _, r := range c.readersSnapshot() {
