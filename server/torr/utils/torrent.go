@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	defTrackers   = []string{
+	defTrackers = []string{
 		"http://retracker.local/announce",
 		"http://bt4.t-ru.org/ann?magnet",
 		"http://retracker.mgts.by:80/announce",
@@ -52,6 +52,7 @@ func GetTrackerFromFile() []string {
 		list := strings.Split(string(buf), "\n")
 		var ret []string
 		for _, l := range list {
+			l = strings.TrimSpace(l)
 			if strings.HasPrefix(l, "udp") || strings.HasPrefix(l, "http") {
 				ret = append(ret, l)
 			}
