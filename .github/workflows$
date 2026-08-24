@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "*"
+    branches:
+      - appimage
 
 jobs:
   build:
@@ -165,7 +167,7 @@ jobs:
           path: ${{ github.workspace }}/dist/TorrServer-gst-windows-amd64.exe
 
   # Builds AppImages for amd64, arm64, armv7 from the binaries already
-  # produced by "build". ARCH selects the correct runtime automatically.
+  # produced by "build". ARCH just tags the output filename.
   build-appimage:
     needs: build
     runs-on: ubuntu-22.04
@@ -230,7 +232,7 @@ jobs:
 
       - name: Download appimagetool
         run: |
-          wget -q -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          wget -q -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x appimagetool
 
       - name: Build AppImage
@@ -244,6 +246,74 @@ jobs:
         with:
           name: binaries-appimage-${{ matrix.arch_name }}
           path: ${{ github.workspace }}/dist-appimage/*.AppImage
+
+      # Runs once (only on the amd64 leg) since the script itself is arch-independent.
+      - name: Create launcher script
+        if: matrix.arch_name == 'amd64'
+        run: |
+          cat > torrserver-launcher.sh <<'SCRIPT_EOF'
+          #!/bin/bash
+          set -e
+
+          # TorrServer - universal AppImage launcher
+          # Detects the host architecture and downloads/runs the matching
+          # AppImage from the latest GitHub release.
+
+          REPO="YouROK/TorrServer"
+          INSTALL_DIR="${HOME}/.local/bin"
+          APPIMAGE_PATH="${INSTALL_DIR}/TorrServer.AppImage"
+
+          mkdir -p "${INSTALL_DIR}"
+
+          ARCH_RAW="$(uname -m)"
+          case "${ARCH_RAW}" in
+            x86_64|amd64)
+              APPIMAGE_ARCH="x86_64"
+              ;;
+            aarch64|arm64)
+              APPIMAGE_ARCH="aarch64"
+              ;;
+            armv7l|armv7|armhf)
+              APPIMAGE_ARCH="armhf"
+              ;;
+            *)
+              echo "!! Unsupported architecture: ${ARCH_RAW}"
+              echo "   TorrServer AppImage only supports: x86_64, aarch64, armhf"
+              exit 1
+              ;;
+          esac
+
+          echo ">> Detected architecture: ${ARCH_RAW} -> ${APPIMAGE_ARCH}"
+
+          DOWNLOAD_URL=$(curl -sL "https://api.github.com/repos/${REPO}/releases/latest" \
+            | grep "browser_download_url" \
+            | grep "AppImage" \
+            | grep "${APPIMAGE_ARCH}" \
+            | cut -d '"' -f4 \
+            | head -n 1)
+
+          if [ -z "${DOWNLOAD_URL}" ]; then
+            echo "!! No AppImage found for ${APPIMAGE_ARCH} in the latest release."
+            echo "   Check manually: https://github.com/${REPO}/releases"
+            exit 1
+          fi
+
+          echo ">> Downloading: ${DOWNLOAD_URL}"
+          curl -L -o "${APPIMAGE_PATH}" "${DOWNLOAD_URL}"
+          chmod +x "${APPIMAGE_PATH}"
+
+          echo ""
+          echo "Installed at: ${APPIMAGE_PATH}"
+          exec "${APPIMAGE_PATH}" "$@"
+          SCRIPT_EOF
+          chmod +x torrserver-launcher.sh
+
+      - name: Upload Launcher Artifact
+        if: matrix.arch_name == 'amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: torrserver-launcher
+          path: torrserver-launcher.sh
 
   release:
     needs:
