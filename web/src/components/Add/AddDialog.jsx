@@ -19,6 +19,7 @@ import useOnStandaloneAppOutsideClick from 'utils/useOnStandaloneAppOutsideClick
 import {
   checkImageURL,
   getMoviePosters,
+  getMovieData,
   checkTorrentSource,
   parseTorrentTitle,
   shortenTitleForPosterSearch,
@@ -55,6 +56,7 @@ export default function AddDialog({
   const [skipDebounce, setSkipDebounce] = useState(false)
   const [isCustomTitleEnabled, setIsCustomTitleEnabled] = useState(false)
   const [currentSourceHash, setCurrentSourceHash] = useState()
+  const [tmdbData, setTmdbData] = useState(null)
   const editModePosterSearchedRef = useRef(false)
 
   // When files are dropped/selected, switch to MultiAddDialog
@@ -147,6 +149,9 @@ export default function AddDialog({
           return
         }
         const query = shortenTitleForPosterSearch(String(movieName).trim())
+        getMovieData(query || movieName, language).then(data => {
+          setTmdbData(data)
+        })
 
         getMoviePosters(query || movieName, language).then(urlList => {
           if (urlList) {
@@ -261,6 +266,10 @@ export default function AddDialog({
           title,
           category,
           poster: posterUrl,
+          data: JSON.stringify({
+            lampa: true,
+            movie: tmdbData,
+          }),
           save_to_db: true,
         })
         .catch(handleClose)
