@@ -66,6 +66,26 @@ export const getMoviePosters = async (movieName, language = 'en') => {
     return null
   }
 
+  export const getMovieData = async (movieName, language = 'en') => {
+  const settings = await getTMDBSettings()
+
+  if (!settings.APIKey) return null
+
+  const url = buildTmdbSearchUrl(settings.APIURL)
+
+  return axios
+    .get(url, {
+      params: {
+        api_key: settings.APIKey,
+        language,
+        include_image_language: `${language},null,en`,
+        query: movieName,
+      },
+    })
+    .then(({ data: { results } }) => results.filter(el => el.poster_path)[0] || null)
+    .catch(() => null)
+}
+
   const url = buildTmdbSearchUrl(settings.APIURL)
 
   const imgHost = normalizeUrl(
