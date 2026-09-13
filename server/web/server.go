@@ -2,7 +2,6 @@ package web
 
 import (
 	"net"
-	"os"
 	"sort"
 
 	gstreamer "server/gstreamer/bridge"
@@ -24,13 +23,14 @@ import (
 	"server/web/msx"
 
 	"server/log"
+	"server/mcp"
 	"server/torr"
 	"server/version"
 	"server/web/api"
 	"server/web/auth"
-	"server/web/blocker"
 	"server/web/pages"
 	"server/web/sslcerts"
+	"server/web/waf"
 )
 
 var (
@@ -50,7 +50,7 @@ var (
 
 // @externalDocs.description	OpenAPI
 // @externalDocs.url			https://swagger.io/resources/open-api/
-func Start() {
+func Start() error {
 	log.TLogln("Start TorrServer " + version.Version + " torrent " + version.GetTorrentVersion())
 	ips := GetLocalIps()
 	if len(ips) > 0 {
@@ -58,8 +58,8 @@ func Start() {
 	}
 	err := BTS.Connect()
 	if err != nil {
-		log.TLogln("BTS.Connect() error!", err) // waitChan <- err
-		os.Exit(1)                              // return
+		log.TLogln("BTS.Connect() error!", err)
+		return err
 	}
 	rutor.Start()
 
@@ -72,15 +72,20 @@ func Start() {
 	corsCfg := cors.DefaultConfig()
 	corsCfg.AllowAllOrigins = true
 	corsCfg.AllowPrivateNetwork = true
-	corsCfg.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "X-Requested-With", "Accept", "Authorization"}
+	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "HEAD", "OPTIONS", "DELETE"}
+	corsCfg.AllowHeaders = []string{
+		"Origin", "Content-Length", "Content-Type", "X-Requested-With", "Accept", "Authorization",
+		"Mcp-Protocol-Version", "Mcp-Session-Id", "Last-Event-ID", "Mcp-Method", "Mcp-Name",
+	}
 
 	route := gin.New()
-	route.Use(log.WebLogger(), blocker.Blocker(), gin.Recovery(), cors.New(corsCfg), location.Default())
+	route.Use(log.WebLogger(), waf.WAF(), gin.Recovery(), cors.New(corsCfg), location.Default())
 	auth.SetupAuth(route)
 
 	route.GET("/echo", echo)
 
 	api.SetupRoute(route)
+	mcp.Mount(route.Group("/", auth.CheckAuth()))
 	gstreamer.SetupRoute(route)
 	msx.SetupRoute(route)
 	pages.SetupRoute(route)
@@ -146,6 +151,7 @@ func Start() {
 			}(addr)
 		}
 	}()
+	return nil
 }
 
 func Wait() error {
