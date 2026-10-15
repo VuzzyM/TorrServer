@@ -17,6 +17,7 @@ import { styled } from '@material-ui/core/styles'
 import { useEffect, useMemo, useState } from 'react'
 
 import { SecondarySettingsContent, SettingSectionLabel } from './style'
+import HTTPSSettings from './HTTPSSettings'
 
 // Create a styled status message component
 const StatusMessage = styled('div')(({ theme, severity }) => ({
@@ -37,7 +38,7 @@ const StatusMessage = styled('div')(({ theme, severity }) => ({
   },
 }))
 
-export default function SecondarySettingsComponent({ settings, inputForm }) {
+export default function SecondarySettingsComponent({ settings, inputForm, updateSettings }) {
   const { t } = useTranslation()
   const [storageSettings, setStorageSettings] = useState({
     settings: 'json',
@@ -69,9 +70,7 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
     ConnectionsLimit,
     PeersListenPort,
     ResponsiveMode,
-    SslPort,
-    SslCert,
-    SslKey,
+    MergeAllM3U,
     ShowFSActiveTorr,
   } = settings || {}
 
@@ -321,6 +320,14 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         />
         <FormHelperText margin='none'>{t('SettingsDialog.ResponsiveModeHint')}</FormHelperText>
       </FormGroup>
+      <FormGroup>
+        <FormControlLabel
+          control={<Switch checked={MergeAllM3U} onChange={inputForm} id='MergeAllM3U' color='secondary' />}
+          label={t('SettingsDialog.MergeAllM3U')}
+          labelPlacement='start'
+        />
+        <FormHelperText margin='none'>{t('SettingsDialog.MergeAllM3UHint')}</FormHelperText>
+      </FormGroup>
       <br />
       <FormGroup style={{ marginBottom: '20px' }}>
         <InputLabel htmlFor='RetrackersMode'>{t('SettingsDialog.RetrackersMode')}</InputLabel>
@@ -390,44 +397,7 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         variant='outlined'
         fullWidth
       />
-      {/* HTTPS Section */}
-      <SettingSectionLabel style={{ marginTop: '20px' }}>{t('HTTPS')}</SettingSectionLabel>
-      <TextField
-        onChange={inputForm}
-        margin='normal'
-        id='SslPort'
-        label={t('SettingsDialog.SslPort')}
-        helperText={t('SettingsDialog.SslPortHint')}
-        value={SslPort}
-        type='number'
-        variant='outlined'
-        fullWidth
-      />
-      <br />
-      <TextField
-        onChange={inputForm}
-        margin='normal'
-        id='SslCert'
-        label={t('SettingsDialog.SslCert')}
-        helperText={t('SettingsDialog.SslCertHint')}
-        value={SslCert}
-        type='url'
-        variant='outlined'
-        fullWidth
-      />
-      <br />
-      <TextField
-        onChange={inputForm}
-        margin='normal'
-        id='SslKey'
-        label={t('SettingsDialog.SslKey')}
-        helperText={t('SettingsDialog.SslKeyHint')}
-        value={SslKey}
-        type='url'
-        variant='outlined'
-        fullWidth
-      />
-      <br />
+      <HTTPSSettings updateSettings={updateSettings} />
       {/* TorrFS */}
       <SettingSectionLabel style={{ marginTop: '20px' }}>{t('TorrFS')}</SettingSectionLabel>
       <FormGroup>

@@ -19,6 +19,7 @@ func SetupRoute(route gin.IRouter) {
 
 	authorized.POST("/settings", settings)
 	authorized.GET("/waf", getWAF)
+	authorized.GET("/mediabase", mediaBase)
 	authorized.POST("/waf", updateWAF)
 	authorized.POST("/torznab/test", torznabTest)
 
@@ -36,6 +37,8 @@ func SetupRoute(route gin.IRouter) {
 
 	route.HEAD("/play/:hash/:id", play)
 	route.GET("/play/:hash/:id", play)
+
+	route.GET("/subs/:hash/:id", subsTracks)
 
 	authorized.POST("/viewed", viewed)
 
